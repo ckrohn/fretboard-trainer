@@ -1,3 +1,9 @@
+name: Deploy to GitHub pages
+on:
+  push:
+    branches-ignore:
+      - dependabot/**
+
 jobs:
   build:
     runs-on: ubuntu-latest
