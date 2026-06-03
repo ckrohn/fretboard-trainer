@@ -11,6 +11,8 @@ export function StringSelector() {
       <div className="flex flex-wrap gap-2">
         {stringNumbers.map((stringNumber) => {
           const isSelected = settings.selectedStrings.includes(stringNumber);
+          const guitarString = activeTuning.strings.find((string) => string.stringNumber === stringNumber);
+          const label = guitarString ? `${guitarString.openNoteName} (${stringNumber})` : `String ${stringNumber}`;
 
           return (
             <button
@@ -24,7 +26,7 @@ export function StringSelector() {
               aria-pressed={isSelected}
               onClick={() => toggleString(stringNumber)}
             >
-              {stringNumber}
+              {label}
             </button>
           );
         })}

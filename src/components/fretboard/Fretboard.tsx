@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { getFrets, validateSelectedStrings } from "../../music/fretboard";
 import type {
   FretboardCellData,
@@ -44,6 +45,12 @@ const getOrderedStrings = (
 const getStringThickness = (stringNumber: StringNumber): string =>
   `${Math.min(4, 1 + stringNumber * 0.35)}px`;
 
+const focusCell = (stringNumber: StringNumber, fret: number): void => {
+  const selector = `[data-fretboard-cell="${stringNumber}-${fret}"]`;
+  const element = document.querySelector<HTMLButtonElement>(selector);
+  element?.focus();
+};
+
 export function Fretboard({
   tuning,
   cells,
@@ -68,11 +75,46 @@ export function Fretboard({
   const markerByPosition = new Map(
     markers.map((marker) => [`${marker.stringNumber}-${marker.fret}`, marker] as const)
   );
-  const fretboardColumns = `repeat(${frets.length}, minmax(2.75rem, 1fr))`;
+  const fretboardColumns = `repeat(${frets.length}, minmax(3.25rem, 1fr))`;
+
+  const handleCellKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    cell: FretboardCellData
+  ) => {
+    const rowIndex = orderedStrings.findIndex(
+      (string) => string.stringNumber === cell.stringNumber
+    );
+    const fretIndex = frets.indexOf(cell.fret);
+
+    if (rowIndex < 0 || fretIndex < 0) {
+      return;
+    }
+
+    const nextRowIndex =
+      event.key === "ArrowUp"
+        ? Math.max(0, rowIndex - 1)
+        : event.key === "ArrowDown"
+          ? Math.min(orderedStrings.length - 1, rowIndex + 1)
+          : rowIndex;
+    const nextFretIndex =
+      event.key === "ArrowLeft"
+        ? Math.max(0, fretIndex - 1)
+        : event.key === "ArrowRight"
+          ? Math.min(frets.length - 1, fretIndex + 1)
+          : fretIndex;
+
+    if (nextRowIndex !== rowIndex || nextFretIndex !== fretIndex) {
+      event.preventDefault();
+      focusCell(orderedStrings[nextRowIndex].stringNumber, frets[nextFretIndex]);
+    }
+  };
 
   return (
-    <div className="overflow-x-auto rounded border border-stone-500 bg-stone-900 p-3 shadow-inner">
-      <div className="min-w-[48rem]">
+    <div
+      className="overflow-x-auto rounded border border-stone-500 bg-stone-900 p-2 shadow-inner sm:p-3"
+      aria-label={`${tuning.label} fretboard`}
+    >
+      <div className="min-w-[56rem]">
         {showFretNumbers ? (
           <FretMarkers
             frets={frets}
@@ -106,6 +148,8 @@ export function Fretboard({
                   showNoteNames={showNoteNames}
                   showStringNames={showStringNames}
                   stringThickness={getStringThickness(string.stringNumber)}
+                  focusKey={`${cell.stringNumber}-${cell.fret}`}
+                  onCellKeyDown={handleCellKeyDown}
                 />
               );
             })

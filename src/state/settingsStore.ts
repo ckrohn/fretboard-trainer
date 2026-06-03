@@ -1,7 +1,8 @@
-import { createContext, createElement, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, createElement, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { SIMPLE_INTERVALS } from "../music/intervals";
 import { getStringNumbersForTuning } from "../music/instruments";
 import { getTuningById, STANDARD_6_STRING_TUNING } from "../music/tunings";
+import { LOCAL_STORAGE_KEYS, readLocalStorageJson, removeLocalStorageValue, writeLocalStorageJson } from "../utils/localStorage";
 import type { AppSettings } from "../types/settings";
 import type { InstrumentType, StringNumber, Tuning } from "../types/music";
 
@@ -31,6 +32,7 @@ type SettingsContextValue = {
   toggleString: (stringNumber: StringNumber) => void;
   setSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void;
   toggleAllowedInterval: (intervalId: string) => void;
+  resetSettings: () => void;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -38,45 +40,76 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 const tuningIdForInstrument = (instrumentType: InstrumentType): string =>
   instrumentType === "sevenStringGuitar" ? "standard-7" : "standard-6";
 
-const validateSettings = (settings: AppSettings): AppSettings => {
-  const activeTuning = getTuningById(settings.tuningId);
+const isInstrumentType = (value: unknown): value is InstrumentType =>
+  value === "sixStringGuitar" || value === "sevenStringGuitar";
 
-  if (activeTuning.instrumentType !== settings.instrumentType) {
-    throw new Error("Active tuning must match active instrument type.");
+const validateSettings = (settings: AppSettings): AppSettings => {
+  let activeTuning: Tuning;
+  let didFallbackToDefaultTuning = false;
+
+  try {
+    activeTuning = getTuningById(settings.tuningId);
+  } catch {
+    activeTuning = STANDARD_6_STRING_TUNING;
+    didFallbackToDefaultTuning = true;
   }
 
-  const startFret = Math.max(0, Math.trunc(settings.startFret));
-  const endFret = Math.max(startFret, Math.trunc(settings.endFret));
+  const instrumentType = didFallbackToDefaultTuning
+    ? STANDARD_6_STRING_TUNING.instrumentType
+    : isInstrumentType(settings.instrumentType)
+      ? settings.instrumentType
+      : activeTuning.instrumentType;
+
+  if (activeTuning.instrumentType !== instrumentType) {
+    activeTuning = getTuningById(tuningIdForInstrument(instrumentType));
+  }
+
+  const startFret = Math.max(0, Math.trunc(Number(settings.startFret)) || 0);
+  const rawEndFret = Math.trunc(Number(settings.endFret));
+  const endFret = Number.isFinite(rawEndFret) ? Math.max(startFret, rawEndFret) : startFret;
   const tuningStringNumbers = getStringNumbersForTuning(activeTuning);
   const tuningStringSet = new Set(tuningStringNumbers);
-  const selectedStrings = settings.selectedStrings.filter((stringNumber) =>
-    tuningStringSet.has(stringNumber)
-  );
-
-  if (selectedStrings.length === 0) {
-    throw new Error("Selected strings must not be empty.");
-  }
-
-  if (settings.allowedIntervals.length === 0) {
-    throw new Error("Allowed intervals must not be empty.");
-  }
+  const selectedStrings = Array.isArray(settings.selectedStrings)
+    ? settings.selectedStrings.filter((stringNumber) => tuningStringSet.has(stringNumber))
+    : [];
+  const allowedIntervalIds = new Set<string>(SIMPLE_INTERVALS.map((interval) => interval.id));
+  const allowedIntervals = Array.isArray(settings.allowedIntervals)
+    ? settings.allowedIntervals.filter((intervalId) => allowedIntervalIds.has(intervalId))
+    : [];
 
   return {
+    ...DEFAULT_SETTINGS,
     ...settings,
+    instrumentType,
+    tuningId: activeTuning.id,
     startFret,
     endFret,
-    selectedStrings
+    selectedStrings: selectedStrings.length > 0 ? selectedStrings : tuningStringNumbers,
+    accidentalPreference: settings.accidentalPreference === "flats" ? "flats" : "sharps",
+    showNoteNames: Boolean(settings.showNoteNames),
+    showStringNames: typeof settings.showStringNames === "boolean" ? settings.showStringNames : DEFAULT_SETTINGS.showStringNames,
+    showFretNumbers: Boolean(settings.showFretNumbers),
+    highStringOnTop: typeof settings.highStringOnTop === "boolean" ? settings.highStringOnTop : DEFAULT_SETTINGS.highStringOnTop,
+    allowedIntervals: allowedIntervals.length > 0 ? allowedIntervals : DEFAULT_SETTINGS.allowedIntervals,
+    listeningPlaybackMode: settings.listeningPlaybackMode === "harmonic" ? "harmonic" : "melodicAscending"
   };
 };
 
+const loadSettings = (): AppSettings =>
+  validateSettings(readLocalStorageJson(LOCAL_STORAGE_KEYS.settings, DEFAULT_SETTINGS));
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [selectedStringsByInstrument, setSelectedStringsByInstrument] =
     useState<SelectedStringsByInstrument>({
-      [DEFAULT_SETTINGS.instrumentType]: DEFAULT_SETTINGS.selectedStrings
+      [settings.instrumentType]: settings.selectedStrings
     });
 
   const activeTuning = useMemo(() => getTuningById(settings.tuningId), [settings.tuningId]);
+
+  useEffect(() => {
+    writeLocalStorageJson(LOCAL_STORAGE_KEYS.settings, settings);
+  }, [settings]);
 
   const updateSettings = (updater: (current: AppSettings) => AppSettings) => {
     setSettings((current) => validateSettings(updater(current)));
@@ -146,6 +179,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resetSettings = () => {
+    removeLocalStorageValue(LOCAL_STORAGE_KEYS.settings);
+    setSettings(DEFAULT_SETTINGS);
+    setSelectedStringsByInstrument({
+      [DEFAULT_SETTINGS.instrumentType]: DEFAULT_SETTINGS.selectedStrings
+    });
+  };
+
   const value = useMemo<SettingsContextValue>(
     () => ({
       settings,
@@ -155,7 +196,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setSelectedStrings,
       toggleString,
       setSetting,
-      toggleAllowedInterval
+      toggleAllowedInterval,
+      resetSettings
     }),
     [settings, activeTuning]
   );

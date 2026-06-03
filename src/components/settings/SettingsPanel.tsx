@@ -16,13 +16,86 @@ const usesAllowedIntervals = (modeId: PracticeModeId): boolean =>
   modeId === "visualInterval" || modeId === "intervalListening";
 
 export function SettingsPanel() {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const { settings, resetSettings, setSetting } = useSettings();
+
   return (
     <section className="flex flex-col gap-4 rounded border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-950">Settings</h2>
-        <p className="text-sm text-slate-600">General app configuration</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-950">Global settings</h2>
+          <p className="text-sm text-slate-600">General app and fretboard display options</p>
+        </div>
+        <button
+          className="h-9 rounded border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 transition hover:border-emerald-500 hover:text-emerald-700"
+          type="button"
+          aria-expanded={isExpanded}
+          onClick={() => setIsExpanded((current) => !current)}
+        >
+          {isExpanded ? "Collapse" : "Expand"}
+        </button>
       </div>
-      <InstrumentSelector />
+
+      {isExpanded ? (
+        <>
+          <InstrumentSelector />
+          <div className="rounded border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+              <label className="flex w-full max-w-xs flex-col gap-2">
+                <span className="text-sm font-medium text-slate-700">Accidentals</span>
+                <select
+                  className="h-10 rounded border border-slate-300 bg-white px-3"
+                  value={settings.accidentalPreference}
+                  onChange={(event) =>
+                    setSetting("accidentalPreference", event.target.value as typeof settings.accidentalPreference)
+                  }
+                >
+                  <option value="sharps">Sharps</option>
+                  <option value="flats">Flats</option>
+                </select>
+              </label>
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 text-sm font-medium text-slate-700">Fretboard display</legend>
+                <div className="flex min-h-10 flex-wrap items-center gap-x-5 gap-y-2">
+                  <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <input
+                      checked={settings.showStringNames}
+                      type="checkbox"
+                      onChange={(event) => setSetting("showStringNames", event.target.checked)}
+                    />
+                    Show string names
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <input
+                      checked={settings.showFretNumbers}
+                      type="checkbox"
+                      onChange={(event) => setSetting("showFretNumbers", event.target.checked)}
+                    />
+                    Show fret numbers
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <input
+                      checked={settings.highStringOnTop}
+                      type="checkbox"
+                      onChange={(event) => setSetting("highStringOnTop", event.target.checked)}
+                    />
+                    High string on top
+                  </label>
+                </div>
+              </fieldset>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              className="h-10 rounded border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 transition hover:border-emerald-500 hover:text-emerald-700"
+              type="button"
+              onClick={resetSettings}
+            >
+              Reset settings
+            </button>
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }
@@ -88,54 +161,15 @@ export function TrainingSettingsPanel({ modeId }: TrainingSettingsPanelProps) {
         </div>
       ) : null}
 
-      {isExpanded && shouldShowFretboardSettings ? (
-        <div className="grid gap-3 rounded border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-5">
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-slate-700">Accidentals</span>
-            <select
-              className="h-10 rounded border border-slate-300 bg-white px-3"
-              value={settings.accidentalPreference}
-              onChange={(event) =>
-                setSetting("accidentalPreference", event.target.value as typeof settings.accidentalPreference)
-              }
-            >
-              <option value="sharps">Sharps</option>
-              <option value="flats">Flats</option>
-            </select>
-          </label>
-          {shouldShowNoteNames ? (
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <input
-                checked={settings.showNoteNames}
-                type="checkbox"
-                onChange={(event) => setSetting("showNoteNames", event.target.checked)}
-              />
-              Show note names
-            </label>
-          ) : null}
+      {isExpanded && shouldShowNoteNames ? (
+        <div className="rounded border border-slate-200 bg-slate-50 p-4">
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <input
-              checked={settings.showStringNames}
+              checked={settings.showNoteNames}
               type="checkbox"
-              onChange={(event) => setSetting("showStringNames", event.target.checked)}
+              onChange={(event) => setSetting("showNoteNames", event.target.checked)}
             />
-            Show string names
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input
-              checked={settings.showFretNumbers}
-              type="checkbox"
-              onChange={(event) => setSetting("showFretNumbers", event.target.checked)}
-            />
-            Show fret numbers
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input
-              checked={settings.highStringOnTop}
-              type="checkbox"
-              onChange={(event) => setSetting("highStringOnTop", event.target.checked)}
-            />
-            High string on top
+            Show note names
           </label>
         </div>
       ) : null}

@@ -14,7 +14,7 @@ export function ModeSelector({ modeId, onModeChange }: ModeSelectorProps) {
 
         return (
           <button
-            className={`flex min-h-28 flex-col items-start justify-between rounded border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-emerald-200 ${
+            className={`flex min-h-28 flex-col items-start justify-between rounded border p-4 text-left transition focus:outline-none focus:ring-4 focus:ring-emerald-200 ${
               isSelected
                 ? "border-emerald-600 bg-emerald-50 text-emerald-950 shadow-sm"
                 : "border-slate-200 bg-white text-slate-900 hover:border-emerald-400 hover:bg-emerald-50/50"

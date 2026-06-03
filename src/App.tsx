@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ModeSelector } from "./components/ModeSelector";
+import { ProgressSummary } from "./components/progress/ProgressSummary";
 import { SettingsPanel, TrainingSettingsPanel } from "./components/settings/SettingsPanel";
 import { useSettings } from "./state/settingsStore";
 import { FindNotesMode } from "./modes/findNotes/FindNotesMode";
@@ -8,7 +9,10 @@ import { VisualIntervalMode } from "./modes/visualInterval/VisualIntervalMode";
 import { VisualNoteMode } from "./modes/visualNote/VisualNoteMode";
 import type { PracticeModeId } from "./types/modes";
 
+type AppView = "training" | "progress";
+
 export default function App() {
+  const [activeView, setActiveView] = useState<AppView>("training");
   const [modeId, setModeId] = useState<PracticeModeId>("visualNote");
   const { activeTuning } = useSettings();
 
@@ -29,20 +33,53 @@ export default function App() {
           </div>
         </header>
 
-        <SettingsPanel />
+        <div className="flex flex-wrap gap-2">
+          <button
+            className={`h-10 rounded border px-4 text-sm font-medium transition ${
+              activeView === "training"
+                ? "border-emerald-700 bg-emerald-700 text-white"
+                : "border-slate-300 bg-white text-slate-800 hover:border-emerald-500 hover:text-emerald-700"
+            }`}
+            type="button"
+            aria-pressed={activeView === "training"}
+            onClick={() => setActiveView("training")}
+          >
+            Training
+          </button>
+          <button
+            className={`h-10 rounded border px-4 text-sm font-medium transition ${
+              activeView === "progress"
+                ? "border-emerald-700 bg-emerald-700 text-white"
+                : "border-slate-300 bg-white text-slate-800 hover:border-emerald-500 hover:text-emerald-700"
+            }`}
+            type="button"
+            aria-pressed={activeView === "progress"}
+            onClick={() => setActiveView("progress")}
+          >
+            Progress
+          </button>
+        </div>
 
-        <ModeSelector modeId={modeId} onModeChange={setModeId} />
-
-        <TrainingSettingsPanel modeId={modeId} />
-
-        {modeId === "visualNote" ? (
-          <VisualNoteMode />
-        ) : modeId === "visualInterval" ? (
-          <VisualIntervalMode />
-        ) : modeId === "findNotes" ? (
-          <FindNotesMode />
+        {activeView === "progress" ? (
+          <ProgressSummary />
         ) : (
-          <IntervalListeningMode />
+          <>
+            <SettingsPanel />
+
+            <ModeSelector modeId={modeId} onModeChange={setModeId} />
+
+            <TrainingSettingsPanel modeId={modeId} />
+
+            {modeId === "visualNote" ? (
+              <VisualNoteMode />
+            ) : modeId === "visualInterval" ? (
+              <VisualIntervalMode />
+            ) : modeId === "findNotes" ? (
+              <FindNotesMode />
+            ) : (
+              <IntervalListeningMode />
+            )}
+          </>
         )}
       </div>
     </main>
