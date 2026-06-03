@@ -5,11 +5,10 @@
   "type": "module",
   "homepage": "https://ckrohn.github.io/fretboard-trainer",
   "scripts": {
-    "predeploy": "npm run build:gh-pages",
+    "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:gh-pages": "tsc -b && vite build --mode github-pages",
     "preview": "vite preview",
     "test": "vitest run"
   },
