@@ -9,6 +9,7 @@ import { getFretboardCells } from "./music/fretboard";
 import { getDefaultTuningForInstrument, getStringNumbersForTuning } from "./music/instruments";
 import { ALL_TUNINGS, getTuningById } from "./music/tunings";
 import { PRACTICE_MODES } from "./modes";
+import { FindNotesMode } from "./modes/findNotes/FindNotesMode";
 import { VisualIntervalMode } from "./modes/visualInterval/VisualIntervalMode";
 import { VisualNoteMode } from "./modes/visualNote/VisualNoteMode";
 import { DEFAULT_SETTINGS } from "./state/settingsStore";
@@ -149,6 +150,12 @@ export default function App() {
           />
         ) : modeId === "visualInterval" ? (
           <VisualIntervalMode
+            instrumentLabel={getInstrumentLabel(instrumentType)}
+            selectedStrings={selectedStrings}
+            tuning={activeTuning}
+          />
+        ) : modeId === "findNotes" ? (
+          <FindNotesMode
             instrumentLabel={getInstrumentLabel(instrumentType)}
             selectedStrings={selectedStrings}
             tuning={activeTuning}
