@@ -31,6 +31,18 @@ export type FretboardCellData = FretboardPosition & {
   noteName: string;
 };
 
+export type FretboardMarkerType =
+  | "root"
+  | "target"
+  | "selected"
+  | "correct"
+  | "incorrect"
+  | "missed";
+
+export type FretboardMarker = FretboardPosition & {
+  type: FretboardMarkerType;
+};
+
 export type Interval = {
   id: string;
   label: string;

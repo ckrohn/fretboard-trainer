@@ -4,11 +4,24 @@ import { Fretboard } from "./components/fretboard/Fretboard";
 import { PracticeLayout } from "./components/layout/PracticeLayout";
 import { ModeSelector } from "./components/settings/ModeSelector";
 import { InstrumentSelector } from "./components/settings/InstrumentSelector";
-import { getDefaultTuningForInstrument } from "./music/instruments";
+import { getFretboardCells } from "./music/fretboard";
+import {
+  getDefaultTuningForInstrument,
+  getStringNumbersForTuning
+} from "./music/instruments";
 import { PRACTICE_MODES } from "./modes";
 import { DEFAULT_SETTINGS } from "./state/settingsStore";
-import type { InstrumentType } from "./types/music";
+import type { FretboardMarker, InstrumentType } from "./types/music";
 import type { PracticeModeId } from "./types/modes";
+
+const SAMPLE_MARKERS: FretboardMarker[] = [
+  { stringNumber: 6, fret: 3, type: "root" },
+  { stringNumber: 5, fret: 5, type: "target" },
+  { stringNumber: 3, fret: 7, type: "selected" },
+  { stringNumber: 2, fret: 8, type: "correct" },
+  { stringNumber: 1, fret: 10, type: "incorrect" },
+  { stringNumber: 4, fret: 12, type: "missed" }
+];
 
 export default function App() {
   const [instrumentType, setInstrumentType] = useState<InstrumentType>(
@@ -22,6 +35,14 @@ export default function App() {
   );
 
   const activeMode = PRACTICE_MODES.find((mode) => mode.id === modeId);
+  const activeSelectedStrings = getStringNumbersForTuning(activeTuning);
+  const activeCells = getFretboardCells(
+    activeTuning,
+    0,
+    12,
+    activeSelectedStrings,
+    "sharps"
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -55,8 +76,18 @@ export default function App() {
         >
           <Fretboard
             tuning={activeTuning}
-            fretStart={DEFAULT_SETTINGS.fretStart}
-            fretEnd={DEFAULT_SETTINGS.fretEnd}
+            cells={activeCells}
+            selectedStrings={activeSelectedStrings}
+            startFret={0}
+            endFret={12}
+            markers={SAMPLE_MARKERS.filter((marker) =>
+              activeSelectedStrings.includes(marker.stringNumber)
+            )}
+            showNoteNames={false}
+            showStringNames
+            showFretNumbers={false}
+            highStringOnTop
+            onCellClick={(cell) => console.info("Fretboard cell", cell)}
           />
           <AnswerPanel modeId={modeId} />
         </PracticeLayout>
