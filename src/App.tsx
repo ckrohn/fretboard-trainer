@@ -9,6 +9,7 @@ import { getFretboardCells } from "./music/fretboard";
 import { getDefaultTuningForInstrument, getStringNumbersForTuning } from "./music/instruments";
 import { ALL_TUNINGS, getTuningById } from "./music/tunings";
 import { PRACTICE_MODES } from "./modes";
+import { VisualNoteMode } from "./modes/visualNote/VisualNoteMode";
 import { DEFAULT_SETTINGS } from "./state/settingsStore";
 import type { FretboardMarker, InstrumentType, StringNumber, Tuning } from "./types/music";
 import type { FeedbackStatus, PracticeModeId, SessionStats } from "./types/modes";
@@ -139,16 +140,24 @@ export default function App() {
 
         <ModeSelector modeId={modeId} onModeChange={setModeId} />
 
-        <PracticeLayout
-          title={activeMode?.label ?? "Practice"}
-          instructions={activeMode?.instructions ?? "Select a practice mode."}
-          instrumentLabel={getInstrumentLabel(instrumentType)}
-          tuning={activeTuning}
-          stats={SESSION_STATS}
-          practiceContent={practiceContent}
-          answerArea={<AnswerPanel modeId={modeId} />}
-          feedbackArea={<FeedbackPanel status={feedback.status} message={feedback.message} />}
-        />
+        {modeId === "visualNote" ? (
+          <VisualNoteMode
+            instrumentLabel={getInstrumentLabel(instrumentType)}
+            selectedStrings={selectedStrings}
+            tuning={activeTuning}
+          />
+        ) : (
+          <PracticeLayout
+            title={activeMode?.label ?? "Practice"}
+            instructions={activeMode?.instructions ?? "Select a practice mode."}
+            instrumentLabel={getInstrumentLabel(instrumentType)}
+            tuning={activeTuning}
+            stats={SESSION_STATS}
+            practiceContent={practiceContent}
+            answerArea={<AnswerPanel modeId={modeId} />}
+            feedbackArea={<FeedbackPanel status={feedback.status} message={feedback.message} />}
+          />
+        )}
       </div>
     </main>
   );
