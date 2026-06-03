@@ -1,27 +1,102 @@
-import type { FretboardCellData } from "../../types/music";
-import { SIMPLE_INTERVALS } from "../../music/intervals";
+import { getFretboardCells } from "../../music/fretboard";
+import { getIntervalBySemitones, type SimpleInterval } from "../../music/intervals";
+import type {
+  FretboardCellData,
+  FretboardPosition,
+  StringNumber,
+  Tuning
+} from "../../types/music";
 import { getRandomItem } from "../../utils/random";
 
 export type VisualIntervalQuestion = {
   root: FretboardCellData;
   target: FretboardCellData;
-  intervalId: (typeof SIMPLE_INTERVALS)[number]["id"];
+  interval: SimpleInterval;
 };
 
-export const generateVisualIntervalQuestion = (
-  cells: FretboardCellData[]
-): VisualIntervalQuestion => {
-  const root = getRandomItem(cells);
-  const candidates = cells.filter((cell) => cell.midi >= root.midi);
-  const target = getRandomItem(candidates.length > 0 ? candidates : cells);
-  const semitones = target.midi - root.midi;
-  const interval =
-    SIMPLE_INTERVALS.find((candidate) => candidate.semitones === semitones) ??
-    SIMPLE_INTERVALS[0];
+type GenerateVisualIntervalQuestionParams = {
+  tuning: Tuning;
+  selectedStrings: readonly StringNumber[];
+  startFret?: number;
+  endFret?: number;
+  previousRoot?: FretboardPosition;
+  previousTarget?: FretboardPosition;
+};
 
-  return {
-    root,
-    target,
-    intervalId: interval.id
-  };
+type CandidatePair = {
+  root: FretboardCellData;
+  target: FretboardCellData;
+  interval: SimpleInterval;
+};
+
+const isSamePosition = (
+  cell: FretboardCellData,
+  position: FretboardPosition | undefined
+): boolean =>
+  position !== undefined &&
+  cell.stringNumber === position.stringNumber &&
+  cell.fret === position.fret;
+
+const isSameQuestion = (
+  candidate: CandidatePair,
+  previousRoot: FretboardPosition | undefined,
+  previousTarget: FretboardPosition | undefined
+): boolean =>
+  isSamePosition(candidate.root, previousRoot) &&
+  isSamePosition(candidate.target, previousTarget);
+
+const buildCandidatePairs = (cells: readonly FretboardCellData[]): CandidatePair[] =>
+  cells.flatMap((root) =>
+    cells.flatMap((target) => {
+      const semitones = target.midi - root.midi;
+
+      if (semitones < 0 || semitones > 12) {
+        return [];
+      }
+
+      if (
+        semitones !== 0 &&
+        root.stringNumber === target.stringNumber &&
+        root.fret === target.fret
+      ) {
+        return [];
+      }
+
+      try {
+        return [{ root, target, interval: getIntervalBySemitones(semitones) }];
+      } catch {
+        return [];
+      }
+    })
+  );
+
+export const generateVisualIntervalQuestion = ({
+  tuning,
+  selectedStrings,
+  startFret = 0,
+  endFret = 12,
+  previousRoot,
+  previousTarget
+}: GenerateVisualIntervalQuestionParams): VisualIntervalQuestion => {
+  const cells = getFretboardCells(
+    tuning,
+    startFret,
+    endFret,
+    selectedStrings,
+    "sharps"
+  );
+  const candidates = buildCandidatePairs(cells);
+
+  if (candidates.length === 0) {
+    throw new Error("No valid visual interval questions are available for the active tuning and fret range.");
+  }
+
+  const nonRepeatingCandidates = candidates.filter(
+    (candidate) => !isSameQuestion(candidate, previousRoot, previousTarget)
+  );
+  const question = getRandomItem(
+    nonRepeatingCandidates.length > 0 ? nonRepeatingCandidates : candidates
+  );
+
+  return question;
 };

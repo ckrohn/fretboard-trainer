@@ -20,6 +20,15 @@ const markerClasses: Record<FretboardMarker["type"], string> = {
   missed: "bg-slate-300 text-slate-950 ring-slate-100"
 };
 
+const markerLabels: Record<FretboardMarker["type"], string> = {
+  root: "R",
+  target: "?",
+  selected: "S",
+  correct: "C",
+  incorrect: "I",
+  missed: "M"
+};
+
 export function FretboardCell({
   cell,
   disabled,
@@ -60,7 +69,7 @@ export function FretboardCell({
             marker ? markerClasses[marker.type] : "bg-stone-950/75 text-amber-50 ring-transparent"
           }`}
         >
-          {marker ? marker.type.slice(0, 1).toUpperCase() : visibleLabel}
+          {marker ? markerLabels[marker.type] : visibleLabel}
         </span>
       ) : null}
     </button>
