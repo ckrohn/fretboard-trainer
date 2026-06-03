@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FeedbackPanel } from "../../components/layout/FeedbackPanel";
 import { PracticeLayout } from "../../components/layout/PracticeLayout";
 import { SIMPLE_INTERVALS, type SimpleInterval } from "../../music/intervals";
+import { useSettings } from "../../state/settingsStore";
 import type { FeedbackStatus, SessionStats } from "../../types/modes";
 import type { Tuning } from "../../types/music";
 import {
@@ -15,11 +16,6 @@ import {
   type IntervalPlaybackHandle,
   type IntervalPlaybackMode
 } from "./playInterval";
-
-type IntervalListeningModeProps = {
-  instrumentLabel: string;
-  tuning: Tuning;
-};
 
 type AnswerResult = {
   selectedIntervalId: SimpleInterval["id"];
@@ -36,22 +32,27 @@ const PLAYBACK_MODES: Array<{
 
 const createQuestion = (
   tuning: Tuning,
+  allowedIntervals: readonly string[],
   previousQuestion?: ListeningQuestion
 ): ListeningQuestion =>
   generateListeningQuestion({
     tuning,
-    previousQuestion
+    previousQuestion,
+    allowedIntervals
   });
 
-export function IntervalListeningMode({
-  instrumentLabel,
-  tuning
-}: IntervalListeningModeProps) {
-  const [question, setQuestion] = useState<ListeningQuestion>(() =>
-    createQuestion(tuning)
+export function IntervalListeningMode() {
+  const { activeTuning: tuning, settings, setSetting } = useSettings();
+  const instrumentLabel = settings.instrumentType === "sevenStringGuitar" ? "7-string guitar" : "6-string guitar";
+  const allowedIntervals = SIMPLE_INTERVALS.filter((interval) =>
+    settings.allowedIntervals.includes(interval.id)
   );
-  const [playbackMode, setPlaybackMode] =
-    useState<IntervalPlaybackMode>("melodicAscending");
+  const [question, setQuestion] = useState<ListeningQuestion>(() =>
+    createQuestion(tuning, settings.allowedIntervals)
+  );
+  const playbackMode = settings.listeningPlaybackMode;
+  const setPlaybackMode = (mode: IntervalPlaybackMode) =>
+    setSetting("listeningPlaybackMode", mode);
   const [answerResult, setAnswerResult] = useState<AnswerResult | null>(null);
   const [hasAudioInteraction, setHasAudioInteraction] = useState(false);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
@@ -96,12 +97,12 @@ export function IntervalListeningMode({
 
   useEffect(() => {
     stopPlayback();
-    setQuestion(createQuestion(tuning));
+    setQuestion(createQuestion(tuning, settings.allowedIntervals));
     setAnswerResult(null);
     setPlaybackError(null);
 
     return stopPlayback;
-  }, [tuning]);
+  }, [tuning, settings.allowedIntervals]);
 
   useEffect(() => {
     if (hasAudioInteraction) {
@@ -126,7 +127,7 @@ export function IntervalListeningMode({
   };
 
   const handleNextQuestion = () => {
-    setQuestion(createQuestion(tuning, question));
+    setQuestion(createQuestion(tuning, settings.allowedIntervals, question));
     setAnswerResult(null);
     setPlaybackError(null);
   };
@@ -198,7 +199,7 @@ export function IntervalListeningMode({
       answerArea={
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 lg:grid-cols-[repeat(13,minmax(0,1fr))]">
-            {SIMPLE_INTERVALS.map((interval) => {
+            {allowedIntervals.map((interval) => {
               const isSelected = answerResult?.selectedIntervalId === interval.id;
 
               return (

@@ -3,6 +3,7 @@ import { Fretboard } from "../../components/fretboard/Fretboard";
 import { FeedbackPanel } from "../../components/layout/FeedbackPanel";
 import { PracticeLayout } from "../../components/layout/PracticeLayout";
 import { getFretboardCells } from "../../music/fretboard";
+import { useSettings } from "../../state/settingsStore";
 import type { FeedbackStatus, SessionStats } from "../../types/modes";
 import type {
   FretboardCellData,
@@ -19,15 +20,6 @@ import {
   generateFindNotesQuestion,
   type FindNotesQuestion
 } from "./generateFindNotesQuestion";
-
-type FindNotesModeProps = {
-  instrumentLabel: string;
-  selectedStrings: readonly StringNumber[];
-  tuning: Tuning;
-};
-
-const START_FRET = 0;
-const END_FRET = 12;
 
 const positionKey = (position: FretboardPosition): string =>
   `${position.stringNumber}-${position.fret}`;
@@ -46,13 +38,12 @@ const positionsToMarkers = (
     type
   }));
 
-export function FindNotesMode({
-  instrumentLabel,
-  selectedStrings,
-  tuning
-}: FindNotesModeProps) {
+export function FindNotesMode() {
+  const { activeTuning: tuning, settings } = useSettings();
+  const instrumentLabel = settings.instrumentType === "sevenStringGuitar" ? "7-string guitar" : "6-string guitar";
+  const selectedStrings = settings.selectedStrings;
   const [question, setQuestion] = useState<FindNotesQuestion>(() =>
-    generateFindNotesQuestion()
+    generateFindNotesQuestion(settings.accidentalPreference)
   );
   const [selectedPositions, setSelectedPositions] = useState<FretboardPosition[]>([]);
   const [evaluation, setEvaluation] = useState<FindNotesEvaluation | null>(null);
@@ -64,15 +55,15 @@ export function FindNotesMode({
   });
 
   const cells = useMemo(
-    () => getFretboardCells(tuning, START_FRET, END_FRET, selectedStrings, "sharps"),
-    [selectedStrings, tuning]
+    () => getFretboardCells(tuning, settings.startFret, settings.endFret, selectedStrings, settings.accidentalPreference),
+    [selectedStrings, tuning, settings.startFret, settings.endFret, settings.accidentalPreference]
   );
 
   useEffect(() => {
-    setQuestion(generateFindNotesQuestion());
+    setQuestion(generateFindNotesQuestion(settings.accidentalPreference));
     setSelectedPositions([]);
     setEvaluation(null);
-  }, [selectedStrings, tuning]);
+  }, [selectedStrings, tuning, settings.startFret, settings.endFret, settings.accidentalPreference]);
 
   const selectedPositionKeys = new Set(selectedPositions.map(positionKey));
   const markers: FretboardMarker[] = evaluation
@@ -119,7 +110,7 @@ export function FindNotesMode({
   };
 
   const handleNextQuestion = () => {
-    setQuestion(generateFindNotesQuestion());
+    setQuestion(generateFindNotesQuestion(settings.accidentalPreference));
     setSelectedPositions([]);
     setEvaluation(null);
   };
@@ -147,14 +138,14 @@ export function FindNotesMode({
           tuning={tuning}
           cells={cells}
           selectedStrings={selectedStrings}
-          startFret={START_FRET}
-          endFret={END_FRET}
+          startFret={settings.startFret}
+          endFret={settings.endFret}
           markers={markers}
           disabled={evaluation !== null}
           showNoteNames={false}
-          showStringNames
-          showFretNumbers={false}
-          highStringOnTop
+          showStringNames={settings.showStringNames}
+          showFretNumbers={settings.showFretNumbers}
+          highStringOnTop={settings.highStringOnTop}
           onCellClick={handleCellClick}
         />
       }

@@ -3,9 +3,11 @@ import { Fretboard } from "../../components/fretboard/Fretboard";
 import { FeedbackPanel } from "../../components/layout/FeedbackPanel";
 import { PracticeLayout } from "../../components/layout/PracticeLayout";
 import { getFretboardCells } from "../../music/fretboard";
-import { SHARP_NOTE_NAMES, noteNameToPitchClass } from "../../music/notes";
+import { FLAT_NOTE_NAMES, SHARP_NOTE_NAMES, noteNameToPitchClass } from "../../music/notes";
+import { useSettings } from "../../state/settingsStore";
 import type { SessionStats } from "../../types/modes";
 import type {
+  AccidentalPreference,
   FretboardMarker,
   FretboardPosition,
   StringNumber,
@@ -16,40 +18,35 @@ import {
   type VisualNoteQuestion
 } from "./generateVisualNoteQuestion";
 
-type VisualNoteModeProps = {
-  instrumentLabel: string;
-  selectedStrings: readonly StringNumber[];
-  tuning: Tuning;
-};
-
 type AnswerResult = {
   selectedNoteName: string;
   isCorrect: boolean;
 };
 
-const START_FRET = 0;
-const END_FRET = 12;
-
 const createQuestion = (
   tuning: Tuning,
   selectedStrings: readonly StringNumber[],
+  startFret: number,
+  endFret: number,
+  accidentalPreference: AccidentalPreference,
   previousPosition?: FretboardPosition
 ): VisualNoteQuestion =>
   generateVisualNoteQuestion({
     tuning,
     selectedStrings,
-    startFret: START_FRET,
-    endFret: END_FRET,
-    previousPosition
+    startFret,
+    endFret,
+    previousPosition,
+    accidentalPreference
   });
 
-export function VisualNoteMode({
-  instrumentLabel,
-  selectedStrings,
-  tuning
-}: VisualNoteModeProps) {
+export function VisualNoteMode() {
+  const { activeTuning: tuning, settings } = useSettings();
+  const instrumentLabel = settings.instrumentType === "sevenStringGuitar" ? "7-string guitar" : "6-string guitar";
+  const selectedStrings = settings.selectedStrings;
+  const answerNoteNames = settings.accidentalPreference === "flats" ? FLAT_NOTE_NAMES : SHARP_NOTE_NAMES;
   const [question, setQuestion] = useState<VisualNoteQuestion>(() =>
-    createQuestion(tuning, selectedStrings)
+    createQuestion(tuning, selectedStrings, settings.startFret, settings.endFret, settings.accidentalPreference)
   );
   const [answerResult, setAnswerResult] = useState<AnswerResult | null>(null);
   const [stats, setStats] = useState<SessionStats>({
@@ -60,14 +57,14 @@ export function VisualNoteMode({
   });
 
   const cells = useMemo(
-    () => getFretboardCells(tuning, START_FRET, END_FRET, selectedStrings, "sharps"),
-    [selectedStrings, tuning]
+    () => getFretboardCells(tuning, settings.startFret, settings.endFret, selectedStrings, settings.accidentalPreference),
+    [selectedStrings, tuning, settings.startFret, settings.endFret, settings.accidentalPreference]
   );
 
   useEffect(() => {
-    setQuestion(createQuestion(tuning, selectedStrings));
+    setQuestion(createQuestion(tuning, selectedStrings, settings.startFret, settings.endFret, settings.accidentalPreference));
     setAnswerResult(null);
-  }, [selectedStrings, tuning]);
+  }, [selectedStrings, tuning, settings.startFret, settings.endFret, settings.accidentalPreference]);
 
   const markers: FretboardMarker[] = [
     {
@@ -100,7 +97,7 @@ export function VisualNoteMode({
 
   const handleNextQuestion = () => {
     setQuestion(
-      createQuestion(tuning, selectedStrings, {
+      createQuestion(tuning, selectedStrings, settings.startFret, settings.endFret, settings.accidentalPreference, {
         stringNumber: question.position.stringNumber,
         fret: question.position.fret
       })
@@ -129,20 +126,20 @@ export function VisualNoteMode({
           tuning={tuning}
           cells={cells}
           selectedStrings={selectedStrings}
-          startFret={START_FRET}
-          endFret={END_FRET}
+          startFret={settings.startFret}
+          endFret={settings.endFret}
           markers={markers}
           disabled={answerResult !== null}
           showNoteNames={false}
-          showStringNames
-          showFretNumbers={false}
-          highStringOnTop
+          showStringNames={settings.showStringNames}
+          showFretNumbers={settings.showFretNumbers}
+          highStringOnTop={settings.highStringOnTop}
         />
       }
       answerArea={
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-12">
-            {SHARP_NOTE_NAMES.map((noteName) => {
+            {answerNoteNames.map((noteName) => {
               const isSelected = answerResult?.selectedNoteName === noteName;
 
               return (

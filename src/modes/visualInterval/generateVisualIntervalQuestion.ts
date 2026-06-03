@@ -1,6 +1,7 @@
 import { getFretboardCells } from "../../music/fretboard";
-import { getIntervalBySemitones, type SimpleInterval } from "../../music/intervals";
+import { getIntervalBySemitones, SIMPLE_INTERVALS, type SimpleInterval } from "../../music/intervals";
 import type {
+  AccidentalPreference,
   FretboardCellData,
   FretboardPosition,
   StringNumber,
@@ -21,6 +22,8 @@ type GenerateVisualIntervalQuestionParams = {
   endFret?: number;
   previousRoot?: FretboardPosition;
   previousTarget?: FretboardPosition;
+  allowedIntervals?: readonly string[];
+  accidentalPreference?: AccidentalPreference;
 };
 
 type CandidatePair = {
@@ -52,7 +55,10 @@ const isSameQuestion = (
   isSamePosition(candidate.root, previousRoot) &&
   isSamePosition(candidate.target, previousTarget);
 
-const buildCandidatePairs = (cells: readonly FretboardCellData[]): CandidatePair[] =>
+const buildCandidatePairs = (
+  cells: readonly FretboardCellData[],
+  allowedIntervals: readonly string[]
+): CandidatePair[] =>
   cells.flatMap((root) =>
     cells.flatMap((target) => {
       const semitones = target.midi - root.midi;
@@ -74,7 +80,11 @@ const buildCandidatePairs = (cells: readonly FretboardCellData[]): CandidatePair
       }
 
       try {
-        return [{ root, target, interval: getIntervalBySemitones(semitones) }];
+        const interval = getIntervalBySemitones(semitones);
+
+        return allowedIntervals.includes(interval.id)
+          ? [{ root, target, interval }]
+          : [];
       } catch {
         return [];
       }
@@ -87,16 +97,18 @@ export const generateVisualIntervalQuestion = ({
   startFret = 0,
   endFret = 12,
   previousRoot,
-  previousTarget
+  previousTarget,
+  allowedIntervals = SIMPLE_INTERVALS.map((interval) => interval.id),
+  accidentalPreference = "sharps"
 }: GenerateVisualIntervalQuestionParams): VisualIntervalQuestion => {
   const cells = getFretboardCells(
     tuning,
     startFret,
     endFret,
     selectedStrings,
-    "sharps"
+    accidentalPreference
   );
-  const candidates = buildCandidatePairs(cells);
+  const candidates = buildCandidatePairs(cells, allowedIntervals);
 
   if (candidates.length === 0) {
     throw new Error("No valid visual interval questions are available for the active tuning and fret range.");

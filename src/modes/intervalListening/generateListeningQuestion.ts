@@ -11,6 +11,7 @@ export type ListeningQuestion = {
 type GenerateListeningQuestionParams = {
   tuning: Tuning;
   previousQuestion?: ListeningQuestion;
+  allowedIntervals?: readonly string[];
 };
 
 const ROOT_RANGE_BY_INSTRUMENT = {
@@ -38,10 +39,13 @@ const isSameQuestion = (
 
 export const generateListeningQuestion = ({
   tuning,
-  previousQuestion
+  previousQuestion,
+  allowedIntervals = SIMPLE_INTERVALS.map((interval) => interval.id)
 }: GenerateListeningQuestionParams): ListeningQuestion => {
   const rootRange = ROOT_RANGE_BY_INSTRUMENT[tuning.instrumentType];
-  const candidates = SIMPLE_INTERVALS.flatMap((interval) => {
+  const candidates = SIMPLE_INTERVALS.filter((interval) =>
+    allowedIntervals.includes(interval.id)
+  ).flatMap((interval) => {
     const maxRootForInterval = Math.min(
       rootRange.max,
       TARGET_MIDI_MAX - interval.semitones

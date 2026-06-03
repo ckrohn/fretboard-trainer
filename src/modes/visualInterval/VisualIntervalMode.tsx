@@ -4,8 +4,10 @@ import { FeedbackPanel } from "../../components/layout/FeedbackPanel";
 import { PracticeLayout } from "../../components/layout/PracticeLayout";
 import { getFretboardCells } from "../../music/fretboard";
 import { SIMPLE_INTERVALS, type SimpleInterval } from "../../music/intervals";
+import { useSettings } from "../../state/settingsStore";
 import type { SessionStats } from "../../types/modes";
 import type {
+  AccidentalPreference,
   FretboardMarker,
   FretboardPosition,
   StringNumber,
@@ -16,42 +18,41 @@ import {
   type VisualIntervalQuestion
 } from "./generateVisualIntervalQuestion";
 
-type VisualIntervalModeProps = {
-  instrumentLabel: string;
-  selectedStrings: readonly StringNumber[];
-  tuning: Tuning;
-};
-
 type AnswerResult = {
   selectedIntervalId: SimpleInterval["id"];
   isCorrect: boolean;
 };
 
-const START_FRET = 0;
-const END_FRET = 12;
-
 const createQuestion = (
   tuning: Tuning,
   selectedStrings: readonly StringNumber[],
+  startFret: number,
+  endFret: number,
+  allowedIntervals: readonly string[],
+  accidentalPreference: AccidentalPreference,
   previousRoot?: FretboardPosition,
   previousTarget?: FretboardPosition
 ): VisualIntervalQuestion =>
   generateVisualIntervalQuestion({
     tuning,
     selectedStrings,
-    startFret: START_FRET,
-    endFret: END_FRET,
+    startFret,
+    endFret,
     previousRoot,
-    previousTarget
+    previousTarget,
+    allowedIntervals,
+    accidentalPreference
   });
 
-export function VisualIntervalMode({
-  instrumentLabel,
-  selectedStrings,
-  tuning
-}: VisualIntervalModeProps) {
+export function VisualIntervalMode() {
+  const { activeTuning: tuning, settings } = useSettings();
+  const instrumentLabel = settings.instrumentType === "sevenStringGuitar" ? "7-string guitar" : "6-string guitar";
+  const selectedStrings = settings.selectedStrings;
+  const allowedIntervals = SIMPLE_INTERVALS.filter((interval) =>
+    settings.allowedIntervals.includes(interval.id)
+  );
   const [question, setQuestion] = useState<VisualIntervalQuestion>(() =>
-    createQuestion(tuning, selectedStrings)
+    createQuestion(tuning, selectedStrings, settings.startFret, settings.endFret, settings.allowedIntervals, settings.accidentalPreference)
   );
   const [answerResult, setAnswerResult] = useState<AnswerResult | null>(null);
   const [stats, setStats] = useState<SessionStats>({
@@ -62,14 +63,14 @@ export function VisualIntervalMode({
   });
 
   const cells = useMemo(
-    () => getFretboardCells(tuning, START_FRET, END_FRET, selectedStrings, "sharps"),
-    [selectedStrings, tuning]
+    () => getFretboardCells(tuning, settings.startFret, settings.endFret, selectedStrings, settings.accidentalPreference),
+    [selectedStrings, tuning, settings.startFret, settings.endFret, settings.accidentalPreference]
   );
 
   useEffect(() => {
-    setQuestion(createQuestion(tuning, selectedStrings));
+    setQuestion(createQuestion(tuning, selectedStrings, settings.startFret, settings.endFret, settings.allowedIntervals, settings.accidentalPreference));
     setAnswerResult(null);
-  }, [selectedStrings, tuning]);
+  }, [selectedStrings, tuning, settings.startFret, settings.endFret, settings.allowedIntervals, settings.accidentalPreference]);
 
   const markers: FretboardMarker[] = [
     {
@@ -105,6 +106,10 @@ export function VisualIntervalMode({
       createQuestion(
         tuning,
         selectedStrings,
+        settings.startFret,
+        settings.endFret,
+        settings.allowedIntervals,
+        settings.accidentalPreference,
         {
           stringNumber: question.root.stringNumber,
           fret: question.root.fret
@@ -139,20 +144,20 @@ export function VisualIntervalMode({
           tuning={tuning}
           cells={cells}
           selectedStrings={selectedStrings}
-          startFret={START_FRET}
-          endFret={END_FRET}
+          startFret={settings.startFret}
+          endFret={settings.endFret}
           markers={markers}
           disabled={answerResult !== null}
-          showNoteNames={false}
-          showStringNames
-          showFretNumbers={false}
-          highStringOnTop
+          showNoteNames={settings.showNoteNames}
+          showStringNames={settings.showStringNames}
+          showFretNumbers={settings.showFretNumbers}
+          highStringOnTop={settings.highStringOnTop}
         />
       }
       answerArea={
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 lg:grid-cols-[repeat(13,minmax(0,1fr))]">
-            {SIMPLE_INTERVALS.map((interval) => {
+            {allowedIntervals.map((interval) => {
               const isSelected = answerResult?.selectedIntervalId === interval.id;
 
               return (

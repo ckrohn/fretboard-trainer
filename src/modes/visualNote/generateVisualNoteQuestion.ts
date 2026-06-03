@@ -1,6 +1,7 @@
 import { getFretboardCells } from "../../music/fretboard";
 import { pitchClassToNoteName } from "../../music/notes";
 import type {
+  AccidentalPreference,
   FretboardCellData,
   FretboardPosition,
   StringNumber,
@@ -19,6 +20,7 @@ type GenerateVisualNoteQuestionParams = {
   startFret?: number;
   endFret?: number;
   previousPosition?: FretboardPosition;
+  accidentalPreference?: AccidentalPreference;
 };
 
 const isSamePosition = (
@@ -34,20 +36,21 @@ export const generateVisualNoteQuestion = ({
   selectedStrings,
   startFret = 0,
   endFret = 12,
-  previousPosition
+  previousPosition,
+  accidentalPreference = "sharps"
 }: GenerateVisualNoteQuestionParams): VisualNoteQuestion => {
   const cells = getFretboardCells(
     tuning,
     startFret,
     endFret,
     selectedStrings,
-    "sharps"
+    accidentalPreference
   );
   const eligibleCells = cells.filter((cell) => !isSamePosition(cell, previousPosition));
   const position = getRandomItem(eligibleCells.length > 0 ? eligibleCells : cells);
 
   return {
     position,
-    answerNoteName: pitchClassToNoteName(position.pitchClass, "sharps")
+    answerNoteName: pitchClassToNoteName(position.pitchClass, accidentalPreference)
   };
 };
