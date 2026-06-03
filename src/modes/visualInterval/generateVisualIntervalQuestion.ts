@@ -29,6 +29,13 @@ type CandidatePair = {
   interval: SimpleInterval;
 };
 
+const MAX_INCLUSIVE_FRET_SPAN = 6;
+
+const getInclusiveFretSpan = (
+  root: FretboardCellData,
+  target: FretboardCellData
+): number => Math.abs(root.fret - target.fret) + 1;
+
 const isSamePosition = (
   cell: FretboardCellData,
   position: FretboardPosition | undefined
@@ -51,6 +58,10 @@ const buildCandidatePairs = (cells: readonly FretboardCellData[]): CandidatePair
       const semitones = target.midi - root.midi;
 
       if (semitones < 0 || semitones > 12) {
+        return [];
+      }
+
+      if (getInclusiveFretSpan(root, target) > MAX_INCLUSIVE_FRET_SPAN) {
         return [];
       }
 
